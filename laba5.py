@@ -1,52 +1,124 @@
 # Laba5.py
 #Задана рекуррентная функция. Область определения функции – натуральные числа. Написать программу сравнительного вычисления данной функции рекурсивно и итерационно. Определить границы применимости рекурсивного и итерационного подхода. Результаты сравнительного исследования времени вычисления представить в табличной и графической форме.
 30.	F(1) = 1; F(2) = 2; F(3) = 3, F(n) = (-1)n*(F(n-3)*(n-1) /(2n)!) при n > 3. 
-import time
+import numpy as np
+from matplotlib import pyplot as plt
 
-# Рекурсивное вычисление функции F
-def recursive_F(n):
-    if n == 1:
-        return 1
-    elif n == 2:
-        return 2
-    elif n == 3:
-        return 3
+# Получение входных данных
+n = int(input("Введите размер матрицы N : "))
+while n < 6:
+    n = int(input("Введите размер матрицы: "))
+k = int(input("Введите коэффициент K: "))
+
+# Создание матрицы A
+A = np.random.randint(-10, 11, size=(n, n))
+F = A.copy()
+print("Матрица A:\n", A, "\n")
+
+# Вспомогательные функции для вывода матрицы
+def print_mat(mat, description):
+    plt.matshow(mat, cmap='inferno')
+    plt.title(description)
+    plt.colorbar()
+    plt.show()
+
+def print_mat1(mat, description):
+    plt.figure(figsize=(10, 4))
+    plt.plot(mat[0, :], 'o-', color='purple')
+    plt.title(description)
+    plt.xlabel('Индекс столбца')
+    plt.ylabel('Значение элемента')
+    plt.grid(True)
+    plt.show()
+
+def print_mat2(F, description):
+    column_sums = np.sum(F, axis=0)
+    plt.bar(range(len(column_sums)), column_sums)
+    plt.title('Столбчатая диаграмма сумм значений столбцов матрицы F')
+    plt.xlabel('Индекс столбца')
+    plt.ylabel('Сумма значений')
+    plt.show()
+
+def print_mat3(F, description):
+    column_sums = np.sum(np.abs(F), axis=0)
+    labels = [f'Столбец {i + 1}' for i in range(F.shape[1])]
+    plt.pie(column_sums, labels=labels, autopct='%1.1f%%', startangle=140)
+    plt.title(description)
+    plt.show()
+
+# Функция для проверки простоты числа
+def is_prime(num):
+    if num <= 1:
+        return False
+    for i in range(2, int(num**0.5) + 1):
+        if num % i == 0:
+            return False
+    return True
+
+# Функция для подсчета количества простых чисел в нечетных столбцах матрицы
+def count_primes_in_odd_columns(mat):
+    count = 0
+    for i in range(1, mat.shape[1], 2):
+        for j in range(mat.shape[0]):
+            if is_prime(mat[j, i]):
+                count += 1
+    return count
+
+# Функция для подсчета произведения чисел по периметру матрицы
+def product_of_perimeter(mat):
+    product = 1
+    for i in range(mat.shape[0]):
+        product *= mat[i, 0]
+        product *= mat[i, mat.shape[1] - 1]
+    for j in range(1, mat.shape[1] - 1):
+        product *= mat[0, j]
+        product *= mat[mat.shape[0] - 1, j]
+    return product
+
+# Функция для формирования матрицы F
+def form_matrix_F(A, B, C, D, E):
+    size = len(A) // 2
+    prime_count = count_primes_in_odd_columns(E)
+    perimeter_product = product_of_perimeter(C)
+
+    # Определение, какие подматрицы менять местами
+    if prime_count > perimeter_product:
+        B, C = np.fliplr(C), np.fliplr(B)
     else:
-        return (-1) ** n * (recursive_F(n - 3) * (n - 1) / (2 * n))
+        C, E = E, C
 
-# Итерационное вычисление функции F
-def iterative_F(n):
-    if n == 1:
-        return 1
-    elif n == 2:
-        return 2
-    elif n == 3:
-        return 3
-    else:
-        result = 3
-        prev_prev = 1
-        prev = 2
-        for i in range(4, n + 1):
-            current = (-1) ** i * (prev_prev * (i - 1) / (2 * i))
-            prev_prev = prev
-            prev = current
-            result += current
-        return result
+    # Формирование матрицы F из подматриц
+    F[:size, :size] = B
+    F[:size, size:] = C
+    F[size:, :size] = D
+    F[size:, size:] = E
+    return F
 
+# Деление матрицы A на подматрицы B, C, D, E
+size = n // 2
+B, C, D, E = A[:size, :size], A[:size, size:], A[size:, :size], A[size:, size:]
 
-def compare_methods():
-    n = int(input("Введите значение n для вычисления функции F(n): "))
+print_mat(A, "Матрица A")
+print_mat(B, "Матрица B")
+print_mat(C, "Матрица C")
+print_mat(D, "Матрица D")
+print_mat(E, "Матрица E")
 
-    start_time = time.time()
-    result_recursive = recursive_F(n)
-    end_time_recursive = time.time()
+# Формирование матрицы F
+F = form_matrix_F(A, B, C, D, E)
+print("Матрица F после перестановки:\n", F, "\n")
+print_mat(F, "Матрица F")
+print_mat1(F, "Матрица F")
+print_mat2(F, "Матрица F")
+print_mat3(F, "Матрица F")
 
-    start_time_iterative = time.time()
-    result_iterative = iterative_F(n)
-    end_time_iterative = time.time()
+# Вычисление результата в зависимости от условия
+if np.linalg.det(A) > np.trace(F):
+    result = np.linalg.inv(A).dot(A.T) - k * np.linalg.inv(F)
+else:
+    G = np.tril(A)
+    result = (A + G - F.T) * k
 
-    print(f"Рекурсивное вычисление: F({n}) = {result_recursive}, Время выполнения: {end_time_recursive - start_time} секунд")
-    print(f"Итерационное вычисление: F({n}) = {result_iterative}, Время выполнения: {end_time_iterative - start_time_iterative} секунд")
-
-if __name__ == "__main__":
-    compare_methods()
+# Вывод итоговой матрицы
+print("Результат:\n", result)
+print_mat(result, "Результат")
