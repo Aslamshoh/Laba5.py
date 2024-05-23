@@ -1,124 +1,68 @@
 # Laba5.py
 #Задана рекуррентная функция. Область определения функции – натуральные числа. Написать программу сравнительного вычисления данной функции рекурсивно и итерационно. Определить границы применимости рекурсивного и итерационного подхода. Результаты сравнительного исследования времени вычисления представить в табличной и графической форме.
 30.	F(1) = 1; F(2) = 2; F(3) = 3, F(n) = (-1)n*(F(n-3)*(n-1) /(2n)!) при n > 3. 
-import numpy as np
-from matplotlib import pyplot as plt
+import matplotlib.pyplot as plt
+import time
 
-# Получение входных данных
-n = int(input("Введите размер матрицы N : "))
-while n < 6:
-    n = int(input("Введите размер матрицы: "))
-k = int(input("Введите коэффициент K: "))
+# Мемоизация для факториала
+factorial_cache = {0: 1}
 
-# Создание матрицы A
-A = np.random.randint(-10, 11, size=(n, n))
-F = A.copy()
-print("Матрица A:\n", A, "\n")
+def factorial(n):
+    if n not in factorial_cache:
+        factorial_cache[n] = n * factorial(n - 1)
+    return factorial_cache[n]
 
-# Вспомогательные функции для вывода матрицы
-def print_mat(mat, description):
-    plt.matshow(mat, cmap='inferno')
-    plt.title(description)
-    plt.colorbar()
-    plt.show()
+# Мемоизация для функции F
+F_cache = {1: 1, 2: 2, 3: 3}
 
-def print_mat1(mat, description):
-    plt.figure(figsize=(10, 4))
-    plt.plot(mat[0, :], 'o-', color='purple')
-    plt.title(description)
-    plt.xlabel('Индекс столбца')
-    plt.ylabel('Значение элемента')
-    plt.grid(True)
-    plt.show()
+# Рекурсивный подход с использованием мемоизации
+def recursive_F(n):
+    if n not in F_cache:
+        sign = -1 if n % 2 else 1
+        F_cache[n] = sign * (recursive_F(n - 3) * (n - 1)) / factorial(2 * n)
+    return F_cache[n]
 
-def print_mat2(F, description):
-    column_sums = np.sum(F, axis=0)
-    plt.bar(range(len(column_sums)), column_sums)
-    plt.title('Столбчатая диаграмма сумм значений столбцов матрицы F')
-    plt.xlabel('Индекс столбца')
-    plt.ylabel('Сумма значений')
-    plt.show()
+# Итеративный подход с использованием кэша факториала
+def iterative_F(n):
+    if n in F_cache:
+        return F_cache[n]
 
-def print_mat3(F, description):
-    column_sums = np.sum(np.abs(F), axis=0)
-    labels = [f'Столбец {i + 1}' for i in range(F.shape[1])]
-    plt.pie(column_sums, labels=labels, autopct='%1.1f%%', startangle=140)
-    plt.title(description)
-    plt.show()
+    f0, f1, f2, f3 = 1, 2, 3, 3
+    for i in range(4, n + 1):
+        sign = -1 if i % 2 else 1
+        fi = sign * (f3 * (i - 1)) / factorial(2 * i)
+        f0, f1, f2, f3 = f1, f2, f3, fi
+        F_cache[i] = fi
 
-# Функция для проверки простоты числа
-def is_prime(num):
-    if num <= 1:
-        return False
-    for i in range(2, int(num**0.5) + 1):
-        if num % i == 0:
-            return False
-    return True
+    return F_cache[n]
 
-# Функция для подсчета количества простых чисел в нечетных столбцах матрицы
-def count_primes_in_odd_columns(mat):
-    count = 0
-    for i in range(1, mat.shape[1], 2):
-        for j in range(mat.shape[0]):
-            if is_prime(mat[j, i]):
-                count += 1
-    return count
+# Сравнение времени выполнения
+n_values = list(range(1, 11))
+recursive_times = []
+iterative_times = []
 
-# Функция для подсчета произведения чисел по периметру матрицы
-def product_of_perimeter(mat):
-    product = 1
-    for i in range(mat.shape[0]):
-        product *= mat[i, 0]
-        product *= mat[i, mat.shape[1] - 1]
-    for j in range(1, mat.shape[1] - 1):
-        product *= mat[0, j]
-        product *= mat[mat.shape[0] - 1, j]
-    return product
+for n in n_values:
+    recursive_start_time = time.perf_counter()
+    recursive_F(n)
+    recursive_time = time.perf_counter() - recursive_start_time
+    recursive_times.append(recursive_time)
 
-# Функция для формирования матрицы F
-def form_matrix_F(A, B, C, D, E):
-    size = len(A) // 2
-    prime_count = count_primes_in_odd_columns(E)
-    perimeter_product = product_of_perimeter(C)
+    iterative_start_time = time.perf_counter()
+    iterative_F(n)
+    iterative_time = time.perf_counter() - iterative_start_time
+    iterative_times.append(iterative_time)
 
-    # Определение, какие подматрицы менять местами
-    if prime_count > perimeter_product:
-        B, C = np.fliplr(C), np.fliplr(B)
-    else:
-        C, E = E, C
+print("Сравнение времени выполнения:")
+print("---------------------------------")
+print("n | Рекурсивное время | Итеративное время")
+print("---|-------------------|-------------------")
+for i in range(len(n_values)):
+    print(f"{n_values[i]} | {recursive_times[i]:.10f} | {iterative_times[i]:.10f}")
 
-    # Формирование матрицы F из подматриц
-    F[:size, :size] = B
-    F[:size, size:] = C
-    F[size:, :size] = D
-    F[size:, size:] = E
-    return F
-
-# Деление матрицы A на подматрицы B, C, D, E
-size = n // 2
-B, C, D, E = A[:size, :size], A[:size, size:], A[size:, :size], A[size:, size:]
-
-print_mat(A, "Матрица A")
-print_mat(B, "Матрица B")
-print_mat(C, "Матрица C")
-print_mat(D, "Матрица D")
-print_mat(E, "Матрица E")
-
-# Формирование матрицы F
-F = form_matrix_F(A, B, C, D, E)
-print("Матрица F после перестановки:\n", F, "\n")
-print_mat(F, "Матрица F")
-print_mat1(F, "Матрица F")
-print_mat2(F, "Матрица F")
-print_mat3(F, "Матрица F")
-
-# Вычисление результата в зависимости от условия
-if np.linalg.det(A) > np.trace(F):
-    result = np.linalg.inv(A).dot(A.T) - k * np.linalg.inv(F)
-else:
-    G = np.tril(A)
-    result = (A + G - F.T) * k
-
-# Вывод итоговой матрицы
-print("Результат:\n", result)
-print_mat(result, "Результат")
+# Вывод графика
+plt.plot(n_values, recursive_times, label='Рекурсивное время')
+plt.plot(n_values, iterative_times, label='Итеративное время')
+plt.xlabel('n')
+plt.ylabel('Время (секунды)')
+plt.legend()
+plt.show()
